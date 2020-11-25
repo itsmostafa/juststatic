@@ -25,6 +25,7 @@ type Page struct {
 // copy an entire directory
 func (r *Route) copy(path string, info os.FileInfo, err error) error {
 	relPath := strings.Replace(path, r.source, "", 1)
+	fmt.Println(filepath.Join(r.destination, relPath))
 
 	switch ext := strings.ToLower(filepath.Ext(relPath)); ext {
 	case ".html":
@@ -33,13 +34,13 @@ func (r *Route) copy(path string, info os.FileInfo, err error) error {
 
 		_ = json.Unmarshal([]byte(file), &page)
 
-		distFile, err := os.Create("public/index.html")
+		distFile, err := os.Create(filepath.Join(r.destination, relPath))
 		if err != nil {
 			return err
 		}
 		defer distFile.Close()
 
-		t := template.Must(template.ParseFiles("templates/index.html"))
+		t := template.Must(template.ParseFiles(filepath.Join(r.source, relPath)))
 		t.Execute(distFile, page)
 		return nil
 	default:
@@ -59,13 +60,17 @@ func (r *Route) copy(path string, info os.FileInfo, err error) error {
 
 // generate static files
 func generate(source, destination string) error {
+	if _, err := os.Stat(destination); os.IsNotExist(err) {
+		os.Mkdir(destination, 0755)
+	}
+
 	r := Route{source, destination}
 	err := filepath.Walk(source, r.copy)
 	return err
 }
 
 func main() {
-	err := generate("templates", "public")
+	err := generate("template", "public")
 	if err != nil {
 		fmt.Println(err)
 	}
