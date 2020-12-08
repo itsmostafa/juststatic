@@ -27,7 +27,11 @@ func (r *Route) Generate() error {
 	}()
 
 	for path := range walker {
-		relPath := strings.Replace(path, r.source+"/", "", 1)
+		relPath, err := filepath.Rel(r.source, path)
+		if err != nil {
+			fmt.Println(err)
+		}
+
 		// create destination folder if it does not exist
 		if _, err := os.Stat(filepath.Join(r.destination, relPath)); os.IsNotExist(err) {
 			os.MkdirAll(filepath.Dir(filepath.Join(r.destination, relPath)), 0755)
