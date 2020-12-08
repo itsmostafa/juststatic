@@ -16,11 +16,6 @@ type Route struct {
 
 // Generate static files
 func (r *Route) Generate() error {
-	// create destination folder if it does not exist
-	if _, err := os.Stat(r.destination); os.IsNotExist(err) {
-		os.Mkdir(r.destination, 0755)
-	}
-
 	walker := make(File)
 
 	go func() {
@@ -33,6 +28,10 @@ func (r *Route) Generate() error {
 
 	for path := range walker {
 		relPath := strings.Replace(path, r.source+"/", "", 1)
+		// create destination folder if it does not exist
+		if _, err := os.Stat(filepath.Join(r.destination, relPath)); os.IsNotExist(err) {
+			os.MkdirAll(filepath.Dir(filepath.Join(r.destination, relPath)), 0755)
+		}
 		switch ext := strings.ToLower(filepath.Ext(relPath)); ext {
 		case ".html":
 			err := Parse(r.source, r.destination, relPath)
@@ -40,13 +39,16 @@ func (r *Route) Generate() error {
 				fmt.Println(err)
 			}
 		default:
-			// Read file from source
-			data, _ := ioutil.ReadFile(path)
-			// Write file to destination
-			err := ioutil.WriteFile(filepath.Join(r.destination, relPath), data, 0777)
+			// initialize destination file
+			destFile, _ := os.Create(filepath.Join(r.destination, relPath))
+			defer destFile.Close()
+			// read file from source
+			data, err := ioutil.ReadFile(path)
 			if err != nil {
 				fmt.Println(err)
 			}
+			// write file
+			destFile.Write(data)
 		}
 
 		fmt.Println("created " + path)

@@ -30,6 +30,7 @@ func (f File) Walk(path string, info os.FileInfo, err error) error {
 	if !info.IsDir() {
 		f <- path
 	}
+
 	return nil
 }
 
@@ -48,7 +49,7 @@ func Parse(src, dest, file string) error {
 		defer distFile.Close()
 
 		t := template.Must(template.ParseFiles(filepath.Join(src, "base.html"), filepath.Join(src, file)))
-		err = t.ExecuteTemplate(distFile, "content", context)
+		err = t.ExecuteTemplate(distFile, "base", context)
 		if err != nil {
 			fmt.Println(err)
 		}
