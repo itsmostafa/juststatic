@@ -14,7 +14,7 @@ juststatic
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
-template/
+templates/
 public/
 *.json
 .DS_Store

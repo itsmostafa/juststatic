@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -61,7 +62,10 @@ func (r *Route) Generate() error {
 }
 
 func main() {
-	route := Route{"template", "public"}
+	var templateDir string
+	flag.StringVar(&templateDir, "t", "./template", "Specify directory from which to read the templates")
+	flag.Parse()
+	route := Route{"templates/" + templateDir, "public"}
 
 	err := route.Generate()
 	if err != nil {

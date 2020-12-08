@@ -13,12 +13,14 @@ import (
 type (
 	File chan string
 
-	// Context variables
+	// Context for templates
 	Context struct {
-		Title  string `json:"title"`
-		Slogan string `json:"slogan"`
-		Phone  string `json:"phone"`
-		Email  string `json:"email"`
+		Name        string `json:"name"`
+		Description string `json:"description"`
+		Domain      string `json:"domain"`
+		Phone       string `json:"phone"`
+		Address     string `json:"address"`
+		Email       string `json:"email"`
 	}
 )
 
@@ -37,7 +39,7 @@ func (f File) Walk(path string, info os.FileInfo, err error) error {
 // Parse templates
 func Parse(src, dest, file string) error {
 	if file != "base.html" {
-		data, _ := ioutil.ReadFile("data.json")
+		data, _ := ioutil.ReadFile(filepath.Join(src, "data.json"))
 		context := Context{}
 
 		_ = json.Unmarshal([]byte(data), &context)
