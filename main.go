@@ -1,76 +1,63 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
-	"html/template"
 	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
 )
 
-// Route ...
+// Route folders
 type Route struct {
-	source      string
-	destination string
+	source, destination string
 }
 
-// Page ...
-type Page struct {
-	Title   string `json:"title"`
-	Content string `json:"content"`
-}
-
-// copy an entire directory
-func (r *Route) copy(path string, info os.FileInfo, err error) error {
-	relPath := strings.Replace(path, r.source, "", 1)
-	fmt.Println(filepath.Join(r.destination, relPath))
-
-	switch ext := strings.ToLower(filepath.Ext(relPath)); ext {
-	case ".html":
-		file, _ := ioutil.ReadFile("data.json")
-		page := Page{}
-
-		_ = json.Unmarshal([]byte(file), &page)
-
-		distFile, err := os.Create(filepath.Join(r.destination, relPath))
-		if err != nil {
-			return err
-		}
-		defer distFile.Close()
-
-		t := template.Must(template.ParseFiles(filepath.Join(r.source, relPath)))
-		t.Execute(distFile, page)
-		return nil
-	default:
-		if relPath == "" {
-			return nil
-		}
-		if info.IsDir() {
-			return os.Mkdir(filepath.Join(r.destination, relPath), 0755)
-		}
-		data, err := ioutil.ReadFile(filepath.Join(r.source, relPath))
-		if err != nil {
-			return err
-		}
-		return ioutil.WriteFile(filepath.Join(r.destination, relPath), data, 0777)
-	}
-}
-
-// generate static files
-func generate(source, destination string) error {
-	if _, err := os.Stat(destination); os.IsNotExist(err) {
-		os.Mkdir(destination, 0755)
+// Generate static files
+func (r *Route) Generate() error {
+	// create destination folder if it does not exist
+	if _, err := os.Stat(r.destination); os.IsNotExist(err) {
+		os.Mkdir(r.destination, 0755)
 	}
 
-	r := Route{source, destination}
-	err := filepath.Walk(source, r.copy)
-	return err
+	walker := make(File)
+
+	go func() {
+		// Gather the files to upload by walking the path recursively
+		if err := filepath.Walk(r.source, walker.Walk); err != nil {
+			log.Fatalln("File walk failed:", err)
+		}
+		close(walker)
+	}()
+
+	for path := range walker {
+		relPath := strings.Replace(path, r.source+"/", "", 1)
+		switch ext := strings.ToLower(filepath.Ext(relPath)); ext {
+		case ".html":
+			err := Parse(r.source, r.destination, relPath)
+			if err != nil {
+				fmt.Println(err)
+			}
+		default:
+			// Read file from source
+			data, _ := ioutil.ReadFile(path)
+			// Write file to destination
+			err := ioutil.WriteFile(filepath.Join(r.destination, relPath), data, 0777)
+			if err != nil {
+				fmt.Println(err)
+			}
+		}
+
+		fmt.Println("created " + path)
+	}
+	return nil
 }
 
 func main() {
-	err := generate("template", "public")
+	route := Route{"template", "public"}
+
+	err := route.Generate()
 	if err != nil {
 		fmt.Println(err)
 	}
